@@ -1,0 +1,12 @@
+{
+  "name": "oriera-worldchat-hackathon-demo",
+  "private": true,
+  "type": "module",
+  "version": "1.0.0",
+  "description": "OriEra WorldChat — conversation is the world. Nebius Token Factory + NVIDIA Nemotron layered-routing demo (Nebius x NVIDIA Global AI Hackathon, Best Apps and Agents track).",
+  "scripts": {
+    "selfcheck": "node selfcheck.mjs",
+    "serve": "node tools/proxy.mjs --static .",
+    "start": "python -m http.server 8000"
+  }
+}

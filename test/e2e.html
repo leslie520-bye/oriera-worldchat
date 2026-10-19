@@ -1,0 +1,124 @@
+<!doctype html>
+<!-- OriEra WorldChat — offline end-to-end harness.
+     Loads the real engine modules with STATIC imports (resolved before the
+     script body runs, immune to headless --dump-dom timing) and drives the
+     full offline pipeline in a real browser engine (canvas included), then
+     prints a JSON verdict into <pre id="e2e-result">:
+       msedge --headless --disable-gpu --timeout=20000 --dump-dom ^
+         http://127.0.0.1:8001/test/e2e.html
+     Not linked from the demo UI; it exists for CI-style smoke testing. -->
+<html lang="en">
+<head><meta charset="utf-8" /><title>e2e</title></head>
+<body>
+<pre id="e2e-result">RUNNING</pre>
+<canvas id="e2e-canvas" width="800" height="500"></canvas>
+<script type="module">
+import { MemoryStore, CommandQueue, parseIntents } from "../engine/kernel.js";
+import { GenAiSystem, ArtDirectorSystem, AssetStore, applyPending, createGenerationProvider, ART_SLOTS } from "../engine/genai.js";
+import { TieredRouter, parseFast, NarratorSystem, DirectorSystem, extractJSON } from "../engine/director.js";
+import { World, MAX_BODIES } from "../engine/world.js";
+
+const out = (j) => { document.getElementById("e2e-result").textContent = JSON.stringify(j); };
+const errs = [];
+window.addEventListener("error", e => errs.push(String(e.message)));
+window.addEventListener("unhandledrejection", e => errs.push(String(e.reason)));
+(async () => {
+try {
+  const results = {};
+  const router = new TieredRouter({ tiers: { fast: null, narrate: null, heavy: null }, log: () => {} });
+  const memory = new MemoryStore("e2e.mem", 10);
+  const world = new World();
+  const canvas = document.getElementById("e2e-canvas");
+  const ctx = canvas.getContext("2d");
+  const W = 800, H = 500;
+
+  // 1. offline parse → queue → execute
+  const applied = [];
+  const queue = new CommandQueue(cmd => {
+    const n = Math.max(0, Math.min(30, Math.round(cmd.args.count ?? 0)));
+    if (cmd.tool === "spawn_balls") world.addBody("ball", n, cmd.args.side, W, H);
+    else if (cmd.tool === "spawn_boxes") world.addBody("box", n, cmd.args.side, W, H);
+    else if (cmd.tool === "set_gravity") world.setGravity(+cmd.args.factor || 0);
+    else if (cmd.tool === "particles") world.setParticles(cmd.args);
+    else if (cmd.tool === "clear_world") world.clearWorld();
+    applied.push(cmd.tool);
+  }, { frameBudget: 4 });
+  const { intents, source } = await parseFast(router, "左边放6个球，右边放一个方块，重力调到0.3，粒子变成金色风暴");
+  results.parse = { source, count: intents.length, tools: intents.map(i => i.tool) };
+  for (const i of intents) queue.submitIntent({ tool: i.tool, args: i.args || {} });
+  queue.tick(world);
+  results.applied = applied;
+
+  // 2. simulate + render (canvas 2d must not throw)
+  for (let f = 0; f < 120; f++) world.step(W, H, 1);
+  world.render(ctx, W, H, {});
+  results.sim = { bodies: world.count(), gravity: world.gravityFactor, particles: world.particlesCfg };
+
+  // 3. L8 procedural retheme lands through the full hot-swap chain
+  const genai = new GenAiSystem(createGenerationProvider({}), { maxInFlight: 3 });
+  const store = new AssetStore();
+  const swapped = [];
+  store.onInsert(name => swapped.push(name));
+  const art = new ArtDirectorSystem(genai);
+  art.retheme(world, "dusk volcanic isles");
+  const t0 = performance.now();
+  while (genai.pending() > 0 && performance.now() - t0 < 6000) {
+    genai.tick(world);
+    applyPending(store, world);
+    await new Promise(r => setTimeout(r, 30));
+  }
+  applyPending(store, world);
+  results.art = { swapped: swapped.sort(), slots: ART_SLOTS.map(s => s.name).sort(),
+                  meter: world.genaiMeter, bytes: store.getNamed("sky.dome")?.payload.length };
+
+  // 4. offline director + narrator honesty
+  const director = new DirectorSystem(router, memory, {});
+  const dir = await director.direct({ day: 1, world: { gravity: 1, bodies: 3 } });
+  results.director = { source: dir.source, act: dir.plan.act };
+  const narrator = new NarratorSystem(router, {});
+  results.narratorOffline = (await narrator.narrate(["x"], "en")) === null;
+
+  // 5. persistence
+  memory.record("user", { turn: 1, day: 1, about: "world", text: "e2e fact", imp: 2 });
+  results.memory = memory.lenTotal() > 0;
+
+  // 6. coalescing guard: conflicting sides must BOTH execute (round-2 fix)
+  const mergedSeen = [];
+  const qMerge = new CommandQueue(c => mergedSeen.push(c), { frameBudget: 8 });
+  for (const { intent } of parseIntents("左边放6个球，右边放6个球"))
+    if (intent) qMerge.submitIntent({ tool: intent.tool, args: { ...intent.args } });
+  qMerge.tick({});
+  results.coalesce = { executed: mergedSeen.length, sides: mergedSeen.map(c => c.args.side) };
+
+  // 7. Nemotron <think> blocks are stripped before extraction
+  const thinkJson = extractJSON('<think>e.g. [{"tool":"clear_world"}] clears.</think>[{"tool":"spawn_balls","args":{"count":1}}]');
+  results.thinkStrip = !!(Array.isArray(thinkJson) && thinkJson[0] && thinkJson[0].tool === "spawn_balls");
+
+  // 8. body cap: FIFO trim + complete snapshot
+  const wc = new World();
+  wc.addBody("ball", MAX_BODIES + 5, "center", 800, 500);
+  results.cap = { n: wc.bodies.length, MAX: MAX_BODIES, snapComplete: wc.snapshot().bodies.length === wc.bodies.length };
+
+  const ok =
+    results.parse.count === 4 &&
+    results.parse.tools.join(",") === "spawn_balls,spawn_boxes,set_gravity,particles" &&
+    results.applied.length === 4 &&
+    results.sim.bodies === 7 && results.sim.gravity === 0.3 &&
+    results.sim.particles.color === "gold" && results.sim.particles.mode === "storm" &&
+    results.art.swapped.join(",") === "poster.1,poster.2,sky.dome" &&
+    results.art.meter && results.art.meter.succeeded === 3 && results.art.meter.failed === 0 &&
+    results.art.bytes > 100 &&
+    results.director.source === "rule" && results.narratorOffline && results.memory &&
+    results.coalesce.executed === 2 &&
+    results.coalesce.sides.join(",") === "left,right" &&
+    results.thinkStrip &&
+    results.cap.n === MAX_BODIES && results.cap.snapComplete &&
+    errs.length === 0;
+  out({ ok, results, errs });
+} catch (e) {
+  out({ ok: false, fatal: String(e && e.stack || e), errs });
+}
+})();
+</script>
+</body>
+</html>

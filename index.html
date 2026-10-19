@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>OriEra WorldChat — Conversation is the World</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<header>
+  <div class="brand">
+    <h1>OriEra <span>WorldChat</span></h1>
+    <span class="tag">Conversation is the world — Nemotron Nano/Super/Ultra routed by the OriEra L2 scheduler</span>
+  </div>
+  <div class="actions">
+    <button id="btn-demo" class="ghost" title="Run the 60-second guided story">▶ Guided demo</button>
+    <button id="btn-direct" class="ghost" title="Ask the AI Director (Ultra tier) to plan the next act">🎬 Direct a scene</button>
+    <button id="btn-settings" class="ghost">⚙ Settings</button>
+    <span id="status-badge" class="badge offline">OFFLINE · rule engine</span>
+  </div>
+</header>
+
+<main>
+  <!-- ============ left: conversation ============ -->
+  <section id="chat-pane">
+    <div id="chat-log"></div>
+    <div id="input-row">
+      <input id="chat-input" placeholder="Try: 左边放6个球，右边放一个方块，重力调到0.3 · particles gold storm · 装帧成「黄昏火山群岛」" />
+      <button id="chat-send">Send</button>
+    </div>
+    <div id="suggestions">
+      <button class="chip" data-say="左边放6个球，右边放一个方块，重力调到0.3">左6球+右1方块+重力0.3</button>
+      <button class="chip" data-say="粒子变成金色风暴">粒子金色风暴</button>
+      <button class="chip" data-say="扔2个球，然后清空">扔2球→清空</button>
+      <button class="chip" data-say="别清空，放3个球">别清空，放3球</button>
+      <button class="chip" data-say="把世界装帧成「黄昏火山群岛」">装帧·黄昏火山</button>
+    </div>
+  </section>
+
+  <!-- ============ center: the world ============ -->
+  <section id="world-pane">
+    <canvas id="world"></canvas>
+    <div id="hud">…</div>
+  </section>
+
+  <!-- ============ right: engine telemetry ============ -->
+  <aside id="tele-pane">
+    <div class="panel" id="panel-router">
+      <h2>L7/L9 router log <span class="hint">every model hop, verifiable</span></h2>
+      <div id="router-log"><div class="muted">No model calls yet — offline rule engine is answering.</div></div>
+    </div>
+    <div class="panel" id="panel-credits">
+      <h2>L2 compute allocation <span class="hint">BudgetAllocator + UsageMeter</span></h2>
+      <div id="allocator"></div>
+      <div id="credits" class="credits">
+        <div>Credits used <b id="credits-used">0</b></div>
+        <div>All-Ultra baseline <b id="credits-baseline">0</b></div>
+        <div class="saved">Saved <b id="credits-saved">—</b> <span class="hint">weights: nano 1 / super 8 / ultra 40 · accrues from live calls only</span></div>
+      </div>
+      <div id="counters" class="counters">
+        <span>commands <b id="cnt-processed">0</b></span>
+        <span>coalesced <b id="cnt-coalesced">0</b></span>
+        <span>deferred <b id="cnt-deferred">0</b></span>
+        <span>art rejected <b id="cnt-rejected">0</b></span>
+      </div>
+    </div>
+    <div class="panel" id="panel-slots">
+      <h2>L8 art slots <span class="hint">named assets, hot-swapped</span></h2>
+      <div id="slots"></div>
+    </div>
+    <div class="panel" id="panel-memory">
+      <h2>L9 memory <span class="hint">localStorage — survives reload</span></h2>
+      <div id="mem-list"></div>
+      <div id="beats"></div>
+      <div class="mem-actions">
+        <button id="btn-export" class="ghost small">Export memory</button>
+        <button id="btn-wipe" class="ghost small danger">New world (wipe)</button>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<!-- ============ settings ============ -->
+<dialog id="settings">
+  <h2>⚙ Nebius Token Factory settings</h2>
+  <p class="hint">The API key stays in your browser's localStorage only — it is never sent anywhere except api.tokenfactory.nebius.com. Without a key the demo runs fully offline on the rule engine (badge turns grey).</p>
+  <label>API key <input id="f-key" type="password" placeholder="nebius token factory api key" /></label>
+  <label>Base URL <input id="f-base" type="text" /></label>
+  <div class="grid3">
+    <label>Fast tier (Nano)<input id="f-fast" type="text" /></label>
+    <label>Mid tier (Super)<input id="f-mid" type="text" /></label>
+    <label>Heavy tier (Ultra)<input id="f-heavy" type="text" /></label>
+  </div>
+  <label>Image model (L8)<input id="f-image" type="text" /></label>
+  <div class="row">
+    <button id="btn-discover" class="ghost">Discover models from /v1/models</button>
+    <label class="inline"><input id="f-narrate" type="checkbox" checked /> Super narration</label>
+  </div>
+  <div id="discover-out" class="hint"></div>
+  <div class="row right">
+    <button id="btn-settings-cancel" class="ghost">Cancel</button>
+    <button id="btn-settings-save">Save & connect</button>
+  </div>
+</dialog>
+
+<footer>
+  Track: <b>Best Apps and Agents</b> · Nebius x NVIDIA Global AI Hackathon ·
+  engine mirrors adapted from the OriEra engine (<code>examples/11-ai-cafe/kernel.js</code>,
+  <code>examples/13-genai-gallery/genai.js</code>, <code>examples/06-agent-physics</code>) — see README.
+</footer>
+
+<script type="module" src="engine/main.js"></script>
+</body>
+</html>

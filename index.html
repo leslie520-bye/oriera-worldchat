@@ -10,11 +10,11 @@
 <header>
   <div class="brand">
     <h1>OriEra <span>WorldChat</span></h1>
-    <span class="tag">Conversation is the world — Nemotron Nano/Super/Ultra routed by the OriEra L2 scheduler</span>
+    <span class="tag">Conversation is the world — Nemotron Nano/Super/heavy tiers routed by the OriEra L2 scheduler</span>
   </div>
   <div class="actions">
     <button id="btn-demo" class="ghost" title="Run the 60-second guided story">▶ Guided demo</button>
-    <button id="btn-direct" class="ghost" title="Ask the AI Director (Ultra tier) to plan the next act">🎬 Direct a scene</button>
+    <button id="btn-direct" class="ghost" title="Ask the AI Director (heavy tier) to plan the next act">🎬 Direct a scene</button>
     <button id="btn-settings" class="ghost">⚙ Settings</button>
     <span id="status-badge" class="badge offline">OFFLINE · rule engine</span>
   </div>
@@ -54,8 +54,8 @@
       <div id="allocator"></div>
       <div id="credits" class="credits">
         <div>Credits used <b id="credits-used">0</b></div>
-        <div>All-Ultra baseline <b id="credits-baseline">0</b></div>
-        <div class="saved">Saved <b id="credits-saved">—</b> <span class="hint">weights: nano 1 / super 8 / ultra 40 · accrues from live calls only</span></div>
+        <div>All-heavy baseline <b id="credits-baseline">0</b></div>
+        <div class="saved">Saved <b id="credits-saved">—</b> <span class="hint">lane weights: fast 1 / mid 8 / heavy 40 · accrues from live calls only</span></div>
       </div>
       <div id="counters" class="counters">
         <span>commands <b id="cnt-processed">0</b></span>
@@ -89,7 +89,7 @@
   <div class="grid3">
     <label>Fast tier (Nano)<input id="f-fast" type="text" /></label>
     <label>Mid tier (Super)<input id="f-mid" type="text" /></label>
-    <label>Heavy tier (Ultra)<input id="f-heavy" type="text" /></label>
+    <label>Heavy tier (planning)<input id="f-heavy" type="text" /></label>
   </div>
   <label>Image model (L8)<input id="f-image" type="text" /></label>
   <div class="row">

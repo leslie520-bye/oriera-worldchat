@@ -9,7 +9,11 @@
  *
  *   fast tier  (Nano)   → L7 one-sentence → ordered tool calls
  *   mid tier   (Super)  → world narrator line after a command batch
- *   heavy tier (Ultra)  → L9 DirectorSystem: act / beat / theme / world plan
+ *   heavy tier          → L9 DirectorSystem: act / beat / theme / world plan
+ *                         (default: nemotron-3-super-120b-a12b — the official
+ *                         successor after llama-3.1-nemotron-ultra-253b-v1 was
+ *                         removed from Token Factory serverless 2026-08-31;
+ *                         any Ultra ID stays Settings-selectable)
  * Every hop is logged with model id, latency and tokens so the routing is
  * visible and verifiable — the judges ARE the platform builders.
  * ============================================================ */
@@ -161,12 +165,12 @@ export class DirectorSystem {
         ], { temp: 0.8, max: 320 }));
         this.router.account("heavy", p.stats.tokens_in - ti0, p.stats.tokens_out - to0);
       } catch (e) {
-        note = "ultra call failed (" + String(e.message || e).slice(0, 60) + ") → rule acts";
+        note = "heavy call failed (" + String(e.message || e).slice(0, 60) + ") → rule acts";
       }
       if (text != null) {
         const j = extractJSON(text);
-        if (j && j.act && j.beat && j.theme) { plan = j; source = "ultra"; }
-        else note = "ultra reply was not a valid plan JSON (think-block or prose) → rule acts";
+        if (j && j.act && j.beat && j.theme) { plan = j; source = "model"; }
+        else note = "heavy reply was not a valid plan JSON (think-block or prose) → rule acts";
       }
     }
     if (!plan) {

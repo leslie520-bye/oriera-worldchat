@@ -27,7 +27,7 @@ reimplements three OriEra engine layers in the browser and drives them with Nemo
 | **L7 inference runtime** | one sentence → ordered tool calls; frame-budgeted command queue with provable coalescing (`spawn+spawn = 8 balls`), rejection counters | `engine/kernel.js`, `engine/director.js` (fast tier = **Nemotron Nano**) |
 | **L2 compute allocation** | per-tier EWMA shares, token/credit metering, `saved X% vs all-Ultra` | `engine/kernel.js` (`BudgetAllocator`, `UsageMeter`) |
 | **L8 generative content** | `retheme` → Token Factory text-to-image (`flux-schnell`) → payload validation → **named-asset hot swap** of the sky dome and two posters (same handle, new pixels, crossfade) | `engine/genai.js`, `ArtDirectorSystem` |
-| **L9 agent** | AI Director (**Nemotron Ultra**) plans acts: beat + theme + world transform + a memory line; **Super** narrates; `MemoryStore` persists facts and beats to localStorage — reload the page and the world remembers you | `engine/director.js`, `engine/kernel.js` (`MemoryStore`) |
+| **L9 agent** | AI Director (the **HEAVY tier** — default `nvidia/nemotron-3-super-120b-a12b`, the officially promoted successor after `llama-3.1-nemotron-ultra-253b-v1` was removed from Token Factory Serverless; any Ultra ID stays Settings-selectable) plans acts: beat + theme + world transform + a memory line; **Super** narrates; `MemoryStore` persists facts and beats to localStorage — reload the page and the world remembers you | `engine/director.js`, `engine/kernel.js` (`MemoryStore`) |
 
 The world itself (particle field + physics bodies, draggable/throwable) is a dependency-free
 canvas renderer in `engine/world.js`, in the spirit of the engine's `06-agent-physics` and
@@ -39,7 +39,7 @@ AI-native games die of two costs: **latency** (a world that waits on a 250B mode
 "put a ball there" is unplayable) and **credits** (paying Ultra prices for kindergartner tasks).
 OriEra's answer is architectural — AI is an engine system with a scheduler, not a chat box bolted
 onto an app. This demo is that argument, runnable: the fast lane answers in a blink on Nano,
-Super only speaks when there is something to narrate, Ultra only wakes when the story needs a
+Super only speaks when there is something to narrate, the heavy tier only wakes when the story needs a
 plan — and the UI proves the savings instead of claiming them.
 
 ---
@@ -64,13 +64,15 @@ opening `index.html` via file:// will not work.
   director plans from scripted acts, art slots render procedural canvas art. Badge: `OFFLINE`.
 - **Live** → click **⚙ Settings**, paste a **Nebius Token Factory** API key, then **Save &
   connect**. Badge turns green: `LIVE · Nebius Token Factory`. All parsing/narration/direction
-  now hops through Nemotron Nano/Super/Ultra; `retheme` generates real images via Token
+  now hops through Nemotron Nano/Super and the heavy tier; `retheme` generates real images via Token
   Factory's `/v1/images/generations`.
 
 Model IDs are editable in Settings and there is a **Discover models** button that reads your
 account's live `/v1/models` catalog and auto-fills the Nemotron IDs (nano → fast, super → mid,
-ultra → heavy, flux/sdxl → image). **Verify the IDs against your Token Factory catalog before
-judging** — we could not call the API without a key, so defaults are best-effort.
+ultra/nemotron-3 → heavy, flux/sdxl → image; a catalog with no Ultra falls through to the
+promoted nemotron-3 family instead of keeping a dead ID). **Verify the IDs against your Token
+Factory catalog before judging** — we could not call the API without a key, so defaults are
+best-effort.
 
 <details>
 <summary>If the browser blocks the API call (CORS)</summary>
@@ -134,14 +136,16 @@ Two headless-friendly hooks exist in the demo itself (useful for any CI/screensh
 
 1. **One sentence → ordered world commands** (Chinese + English, including mixed clauses,
    Chinese numerals 一–十/两/百, full-width digits, negation guard).
-2. **Visible tiered routing** — every model hop is logged with tier (FAST·Nano / MID·Super /
-   HEAVY·Ultra), model id and latency. Nothing hidden.
-3. **Credits-stretch accounting** — per-tier token metering with editable weights
-   (nano 1 / super 8 / ultra 40, clearly labeled illustrative), live `saved X%` vs all-Ultra.
+2. **Visible tiered routing** — every model hop is logged with tier and the model FAMILY
+   actually called (FAST·Nano / MID·Super / HEAVY·<family> — labels follow the model id),
+   plus model id and latency. Nothing hidden.
+3. **Credits-stretch accounting** — per-tier token metering with editable lane weights
+   (fast 1 / mid 8 / heavy 40, clearly labeled illustrative), live `saved X%` vs the
+   all-heavy baseline.
 4. **L7 queue discipline** — frame-budget execution, provable coalescing (adjacent same-tool
    spawn/boost sum **only when their other args match** — `左6球+右6球` stays two commands;
    repeated gravity collapses last-wins), deferred/rejected counters.
-5. **L9 AI Director (Ultra)** — plans the next act (name + beat + art theme + world transform +
+5. **L9 AI Director (HEAVY tier)** — plans the next act (name + beat + art theme + world transform +
    memory line), auto-triggers every 6 commands or on 🎬 button.
 6. **L8 text-to-image hot swap** — director themes regenerate sky + 2 poster slots via Token
    Factory images; payloads are magic-byte validated before they touch the scene; same-name
@@ -157,7 +161,7 @@ Two headless-friendly hooks exist in the demo itself (useful for any CI/screensh
 10. **Honest degradation** — offline mode never fakes cloud behavior; failures fall back with a
     visible note in the router log ("nano call failed → rule fallback"), and so does a live
     reply that isn't parseable JSON (Nemotron `<think>` blocks are stripped first; if a live
-    Ultra plan still doesn't parse, the fallback reason is shown on the director card).
+    heavy plan still doesn't parse, the fallback reason is shown on the director card).
     Deterministic client errors (401/400) are not retried.
 
 ---
@@ -169,7 +173,7 @@ Two headless-friendly hooks exist in the demo itself (useful for any CI/screensh
 2. **0:20–0:45 — the sandbox.** `粒子变成金色风暴`, drag and throw a ball, `扔2个球，现在有多少个物体？`
    — the world answers with a count.
 3. **0:45–1:20 — the tiered story.** Point at the credits panel: Nano pennies so far. Click
-   **🎬 Direct a scene** → one `HEAVY·Ultra` hop returns an act: new beat, new world state, and
+   **🎬 Direct a scene** → one `HEAVY` hop returns an act: new beat, new world state, and
    an art theme that triggers `retheme` — watch the L8 slots go `generating…` → `hot-swapped`
    as Token Factory images crossfade into the sky and posters. `saved X%` updates live.
 4. **1:20–1:50 — memory.** Note the L9 memory panel (your facts + the director's). **Reload the
@@ -197,8 +201,11 @@ Wi-Fi/key situation can blank the screen; the guided-demo button covers shaky-ha
 - **NVIDIA Nemotron open models:**
   - fast tier (L7 parsing): `nvidia/nemotron-nano-9b-v2` — everyday calls, temp 0.1, ≤220 tok
   - mid tier (narration): `nvidia/llama-3.3-nemotron-super-49b-v1.5` — ≤70 tok, only after batches
-  - heavy tier (L9 direction): `nvidia/llama-3.1-nemotron-ultra-253b-v1` — the only tier allowed
-    to plan
+  - heavy tier (L9 direction): `nvidia/nemotron-3-super-120b-a12b` — the only tier allowed
+    to plan, and the officially promoted successor to `nvidia/llama-3.1-nemotron-ultra-253b-v1`,
+    which was removed from Token Factory Serverless (2026-08-31, official deprecation notice;
+    verified served on Token Factory via Nebius's own announcement, 2026-10-19). If your
+    catalog still serves an Ultra ID, set it in ⚙ Settings or use Discover.
   - L8 art: `black-forest-labs/flux-schnell` (NVIDIA-hosted open model on Token Factory)
   - All four are Settings-editable + auto-discovered from your live catalog; verify before judging.
 - **Token Factory acceleration points:** single OpenAI-compatible endpoint serves all four model

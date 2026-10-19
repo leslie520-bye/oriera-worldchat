@@ -32,7 +32,12 @@ Token Factory for this hackathon.)*
    `llama-3.x-nemotron-super-49b-v1.5`, …). A stable alias
    (`nemotron/nano-latest`) — or a `/v1/models` response that tags each model
    with a `size_class: nano|super|ultra` field — would let tiered routers
-   auto-wire without string heuristics.
+   auto-wire without string heuristics. Concrete instance from this hackathon:
+   our shipped default heavy-tier ID (`nvidia/llama-3.1-nemotron-ultra-253b-v1`)
+   was removed from Token Factory Serverless mid-window (2026-08-31 deprecation
+   notice; successor `nvidia/nemotron-3-super-120b-a12b`). A deprecation feed —
+   or removed IDs resolving to their documented successor for a grace period —
+   would protect shipped configs from silently pointing at dead IDs.
 3. **`response_format: b64_json` on images** is what a browser needs (a `url`
    reply costs a second fetch and sometimes dies on signed-CDN quirks).
    Confirming + documenting the exact field parity with OpenAI images would

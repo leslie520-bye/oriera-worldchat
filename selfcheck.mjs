@@ -22,8 +22,9 @@ import { dirname, join } from "node:path";
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const failures = [];
 const checks = [];
+const pending = [];   // every check promise — verdict waits for ALL of them
 function check(name, fn) {
-  return Promise.resolve()
+  const p = Promise.resolve()
     .then(fn)
     .then(detail => {
       checks.push(name);
@@ -33,6 +34,8 @@ function check(name, fn) {
       failures.push(name + ": " + (e && e.message || e));
       console.error("FAIL  " + name + ": " + (e && e.message || e));
     });
+  pending.push(p);
+  return p;
 }
 function assert(cond, msg) { if (!cond) throw new Error(msg); }
 
@@ -95,7 +98,7 @@ check("no hardcoded API keys in code", () => {
 
 /* ---------- 4. engine behavior: rule parser (offline oracle) ---------- */
 console.log("[4] L7 rule parser (mirrors the verified 06-agent-physics case)");
-const { parseIntent, parseIntents, CommandQueue, BudgetAllocator, UsageMeter, MemoryStore, PROVIDER_PRESETS, NEBIUS_BASE } =
+const { parseIntent, parseIntents, CommandQueue, BudgetAllocator, UsageMeter, MemoryStore, PROVIDER_PRESETS, NEBIUS_BASE, RETIRED_MODEL_IDS } =
   await import("./engine/kernel.js");
 
 check("verified sentence → 5 ordered tool calls", () => {
@@ -309,6 +312,14 @@ check("Nebius preset points at Token Factory + nemotron models", () => {
   assert(/nemotron|llama/i.test(nb.models.heavy), "heavy tier model id present");
   assert(/flux|sdxl|stable/i.test(nb.models.image), "image model id present");
 });
+check("no retired (removed-from-serverless) model ID ships as a default", () => {
+  for (const role of ["fast", "mid", "heavy", "image"]) {
+    assert(!RETIRED_MODEL_IDS.includes(PROVIDER_PRESETS.nebius.models[role]),
+      role + " default must not be a retired ID: " + PROVIDER_PRESETS.nebius.models[role]);
+  }
+  assert(/nemotron-3/i.test(PROVIDER_PRESETS.nebius.models.heavy),
+    "heavy default should be the promoted successor family: " + PROVIDER_PRESETS.nebius.models.heavy);
+});
 check("offline world simulates deterministically enough (bodies stay in bounds)", async () => {
   const { World } = await import("./engine/world.js");
   const w = new World();
@@ -338,6 +349,9 @@ check("world body cap evicts FIFO and the snapshot stays complete", async () => 
 });
 
 /* ---------- verdict ---------- */
+// wait for every check (including ones registered after the last await import)
+// so the count is honest and a late failure can never be silently skipped
+await Promise.all(pending);
 console.log("\n" + (failures.length
   ? `SELFCHECK FAILED — ${checks.length} passed, ${failures.length} failed`
   : `SELFCHECK PASSED — ${checks.length} checks, demo is complete and runnable offline`));

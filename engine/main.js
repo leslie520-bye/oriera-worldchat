@@ -5,7 +5,7 @@
  * and renders telemetry.
  * ============================================================ */
 import {
-  MemoryStore, HttpChatProvider, PROVIDER_PRESETS, NEBIUS_BASE,
+  MemoryStore, HttpChatProvider, PROVIDER_PRESETS, NEBIUS_BASE, RETIRED_MODEL_IDS,
   CommandQueue, BudgetAllocator, UsageMeter, Scheduler,
 } from "./kernel.js";
 import {
@@ -198,7 +198,7 @@ function addMsg(who, text, chips) {
   const names = {
     user: "you", world: "world", narr: "world · narrator (Super)",
     tool: "L7 commands",
-    director: router.ready("heavy") ? "L9 director (Ultra)" : "L9 director (rule)",
+    director: router.ready("heavy") ? "L9 director (" + modelTag(router.tiers.heavy.id) + ")" : "L9 director (rule)",
   };
   d.innerHTML = `<div class="who">${names[who] || who}</div><div class="bubble"></div>`;
   d.querySelector(".bubble").textContent = text;
@@ -214,7 +214,9 @@ function routerLog({ tier, model, ms, ok, note }) {
   const host = $("router-log");
   if (host.querySelector(".muted")) host.innerHTML = "";
   const r = document.createElement("div"); r.className = "rlog";
-  const tierLabel = { fast: "FAST·Nano", narrate: "MID·Super", heavy: "HEAVY·Ultra" }[tier] || tier;
+  // label states the FAMILY actually called — never promise a model we didn't call
+  const tag = modelTag(model || "");
+  const tierLabel = ({ fast: "FAST", narrate: "MID", heavy: "HEAVY" }[tier] || tier) + (tag ? "·" + tag : "");
   r.innerHTML = `<span class="tier ${ok === false ? "local" : tier}">${tierLabel}</span>` +
     `<span class="meta">${escapeHtml(model || "")} · ${ms}ms</span>` +
     (note ? `<span class="note">${escapeHtml(note)}</span>` : "") +
@@ -224,6 +226,15 @@ function routerLog({ tier, model, ms, ok, note }) {
   host.scrollTop = 1e9;
 }
 const escapeHtml = s => s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+/** Short family label from a model id: Ultra/Super/Nano when the id says so,
+ * otherwise a trimmed tail — labels follow the id, never the other way round. */
+function modelTag(id) {
+  const s = String(id || "");
+  if (/ultra/i.test(s)) return "Ultra";
+  if (/super/i.test(s)) return "Super";
+  if (/nano/i.test(s)) return "Nano";
+  return String(s.split("/").pop() || "").slice(0, 16);
+}
 function setStatus() {
   const live = router.ready("fast") || router.ready("narrate") || router.ready("heavy");
   const b = $("status-badge");
@@ -361,9 +372,10 @@ async function runDirector(reason) {
       `World: ${JSON.stringify(plan.world || {})}\nRemember: ${plan.memory || "—"}` +
       recallLine +
       (source === "rule"
-        ? "\n" + (note || "(planned by offline rule acts — connect Ultra for live planning)")
+        ? "\n" + (note || "(planned by offline rule acts — connect a Token Factory key for live planning)")
         : ""),
-      [`source: ${source}`, `model: ${source === "ultra" ? router.tiers.heavy.id : "rule-acts-v1"}`,
+      [`source: ${source === "model" ? "heavy-tier model" : "rule acts"}`,
+       `model: ${source === "model" ? router.tiers.heavy.id : "rule-acts-v1"}`,
        `recall: ${recalled.length} fact${recalled.length === 1 ? "" : "s"} (bigram+recency+importance)`]);
     persistSoon();
     renderPanels();
@@ -413,9 +425,15 @@ async function discoverModels() {
     const pick = re => nem.find(i => re.test(i)) || "";
     $("f-fast").value = pick(/nano/i) || nem[0] || $("f-fast").value;
     $("f-mid").value = pick(/super/i) || pick(/49b/i) || $("f-mid").value;
-    $("f-heavy").value = pick(/ultra/i) || pick(/253b/i) || $("f-heavy").value;
+    // Ultra left Token Factory serverless (2026-08-31): fall through to the
+    // promoted successor family instead of keeping a dead heavy ID
+    $("f-heavy").value = pick(/ultra/i) || pick(/253b/i) || pick(/nemotron-3/i) || pick(/120b/i) || $("f-heavy").value;
     const img = ids.find(i => /flux|stable-diffusion|sdxl/i.test(i));
     if (img) $("f-image").value = img;
+    // if the catalog offered no heavy-family hit at all, never keep a known-retired ID
+    if (!pick(/ultra|253b|nemotron-3|120b/i) && RETIRED_MODEL_IDS.includes($("f-heavy").value)) {
+      $("f-heavy").value = PROVIDER_PRESETS.nebius.models.heavy;
+    }
     out.textContent = `Found ${ids.length} models (${nem.length} nemotron). Fields auto-filled — verify before saving.`;
   } catch (e) { out.textContent = "Discovery failed: " + (e.message || e); }
 }
@@ -552,7 +570,8 @@ setStatus();
 renderPanels();
 addMsg("world",
   "This world answers to sentences. Every sentence is parsed on the FAST tier (Nemotron Nano), narrated on the " +
-  "MID tier (Super) and directed on the HEAVY tier (Ultra) — routed by the OriEra L2 scheduler so credits stretch further.\n" +
+  "MID tier (Super) and directed on the HEAVY tier (" + modelTag(router.tiers.heavy.id) + ") — routed by the " +
+  "OriEra L2 scheduler so credits stretch further.\n" +
   "Tip: the bodies are real physics — grab one on the canvas and throw it.\n" +
   (router.ready("fast")
     ? "Token Factory key detected — live routing is ON."

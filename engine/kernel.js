@@ -131,12 +131,19 @@ export const PROVIDER_PRESETS = {
     models: {
       fast: "nvidia/nemotron-nano-9b-v2",          // everyday fast calls
       mid: "nvidia/llama-3.3-nemotron-super-49b-v1.5", // narration / mid reasoning
-      heavy: "nvidia/llama-3.1-nemotron-ultra-253b-v1", // serious reasoning
+      // heavy reasoning. The previous default (nvidia/llama-3.1-nemotron-ultra-253b-v1)
+      // was removed from Token Factory Serverless (2026-08-31, official deprecation
+      // notice); this is the officially promoted successor. Any Ultra ID your catalog
+      // still serves stays selectable in Settings / Discover.
+      heavy: "nvidia/nemotron-3-super-120b-a12b",
       image: "black-forest-labs/flux-schnell",     // L8 art slot (see genai.js)
     },
   },
   rule: { label: "Offline rule engine", base: "", models: { fast: "rule-v1" }, local: true },
 };
+
+/** A removed-from-catalog model ID must never ship as a default. */
+export const RETIRED_MODEL_IDS = ["nvidia/llama-3.1-nemotron-ultra-253b-v1"];
 
 /* ---------- L7 · command channel (mirror of Rust parse + InferSystem) ----------
  * Natural language → ordered structured commands. parseIntent is a

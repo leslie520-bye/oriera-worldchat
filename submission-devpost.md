@@ -2,7 +2,7 @@
 
 **Track:** Best Apps and Agents · Nebius x NVIDIA Global AI Hackathon
 **One-liner:** Conversation is the world — one sentence rebuilds a living physics sandbox,
-parsed on Nemotron Nano, narrated on Super, directed on Ultra, all routed by a tiered
+parsed on Nemotron Nano, narrated on Super, directed on the heavy tier, all routed by a tiered
 scheduler that shows — in a live router log and a credits panel — how far one Token Factory
 key can stretch.
 
@@ -31,32 +31,36 @@ from this folder (no build step). Boot-verified in headless Chromium against thi
 3. Click **🎬 Direct a scene** — the L9 card shows Act/Beat/Theme plus the `Recalled:` line
    and a `recall: N facts` chip: memory being *used*, not just stored.
 4. **Reload the page** — same world, same memories, same generated art (downsampled cache).
-   Then `node selfcheck.mjs` if you want the 41-check receipt.
+   Then `node selfcheck.mjs` if you want the 49-check receipt.
 
 ## How judges run it locally
 
 ```bash
-node selfcheck.mjs          # 41 checks, offline, exit 0
+node selfcheck.mjs          # 49 checks, offline, exit 0
 node tools/proxy.mjs --static .   # then open http://127.0.0.1:<port>/
 ```
 
 No install, no build. Offline (no key) the world is fully playable: rule-engine parsing,
 procedural L8 art, honest degradation labels. With a Nebius Token Factory key (⚙ Settings →
-Save & connect), parsing/narration/direction hop through Nemotron Nano/Super/Ultra and
-`retheme` calls `/v1/images/generations`; every hop lands in the router log.
+Save & connect), parsing/narration/direction hop through Nemotron Nano/Super and the heavy
+tier and `retheme` calls `/v1/images/generations`; every hop lands in the router log.
 
 ## Known limitations
 
 1. **LIVE path is code-complete but has never been executed against the real Token Factory
    service.** Reason: during the whole submission window we had no API key — Nebius account
    signup is blocked at the billing-country step (no China mainland option), so no trial
-   credits could be activated. What IS verified: `node selfcheck.mjs` → 41/41 passed; the
+   credits could be activated. What IS verified: `node selfcheck.mjs` → 49/49 passed; the
    full offline pipeline passes in a real Chromium engine (`test/e2e.html` → `"ok":true`).
    The ONLINE request shapes (OpenAI-compatible `/chat/completions`;
    `/images/generations` with `response_format: "b64_json"`, `width`, `height`) and the four
    default model IDs (`nvidia/nemotron-nano-9b-v2`, `nvidia/llama-3.3-nemotron-super-49b-v1.5`,
-   `nvidia/llama-3.1-nemotron-ultra-253b-v1`, `black-forest-labs/flux-schnell`) are
-   best-effort against published docs, **not** observed behavior. CORS of the API is also
+   `nvidia/nemotron-3-super-120b-a12b`, `black-forest-labs/flux-schnell`) are
+   best-effort against published docs, **not** observed behavior. The heavy-tier default was
+   updated after `nvidia/llama-3.1-nemotron-ultra-253b-v1` was removed from Token Factory
+   Serverless (2026-08-31 deprecation notice; the successor ID is confirmed served on Token
+   Factory per Nebius's own announcement, checked 2026-10-19 — the live catalog itself could
+   not be enumerated without a key). CORS of the API is also
    unverified; the bundled relay (`node tools/proxy.mjs --relay 8787`, loopback-only) is the
    documented fallback.
    **What HAS been observed online (2026-10-19, unauthenticated):** all endpoints are

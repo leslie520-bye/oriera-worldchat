@@ -17,7 +17,23 @@ key can stretch.
 - Never claim LIVE results that were not observed. The offline demo is fully playable and
   fully verified; the LIVE path status is stated below, verbatim.
 
-## How judges run it
+## Live URL
+
+**<https://leslie520-bye.github.io/oriera-worldchat/>** — GitHub Pages, deployed straight
+from this folder (no build step). Boot-verified in headless Chromium against this exact URL.
+
+## 30-second judge flow
+
+1. Open the URL — on first visit the world introduces itself after ~1.5 s (hook sentence
+   auto-plays once; any click/keypress cancels it if you'd rather drive).
+2. Click chip `别清空，放3球` — watch the negation guard refuse `别清空` while `放3个球`
+   executes (honest refusal, visible in the tool line).
+3. Click **🎬 Direct a scene** — the L9 card shows Act/Beat/Theme plus the `Recalled:` line
+   and a `recall: N facts` chip: memory being *used*, not just stored.
+4. **Reload the page** — same world, same memories, same generated art (downsampled cache).
+   Then `node selfcheck.mjs` if you want the 41-check receipt.
+
+## How judges run it locally
 
 ```bash
 node selfcheck.mjs          # 41 checks, offline, exit 0
@@ -43,6 +59,13 @@ Save & connect), parsing/narration/direction hop through Nemotron Nano/Super/Ult
    best-effort against published docs, **not** observed behavior. CORS of the API is also
    unverified; the bundled relay (`node tools/proxy.mjs --relay 8787`, loopback-only) is the
    documented fallback.
+   **What HAS been observed online (2026-10-19, unauthenticated):** all endpoints are
+   reachable and the gateway accepts the documented paths — with an invalid key,
+   `GET /v1/models` and all three `/chat/completions` tiers return
+   `401 {"detail":"Couldn't authenticate. Reason: Unable authenticate"}` while
+   `/images/generations` returns a bare `404` (undocumented unauthenticated routing; reported
+   in FEEDBACK.md). Authenticated behavior of every probe remains unobserved until a valid
+   key exists.
 2. **How to close this gap the moment a key exists — no code changes required:**
    - `node selfcheck.mjs --live` (optionally `--key=nvapi-…` or env `NEBIUS_API_KEY`) runs
      five read-scale probes (models catalog; fast/mid/heavy chat at ≤24 output tokens; one
@@ -51,8 +74,16 @@ Save & connect), parsing/narration/direction hop through Nemotron Nano/Super/Ult
      router-log evidence. Without a key it fails loudly; it never fakes responses.
    - Browser path: ⚙ Settings → paste key → Save & connect → run the guided demo; if model
      IDs drifted, ⚙ → Discover models re-fills them from the live `/v1/models` catalog.
-3. **No hosted URL** for the same account/credentials reason. Deploy is a folder push to any
-   static host (no build step exists); until then judges run the two commands above.
+3. **Hosting is independent of the Nebius blocker and is now done:** the folder was pushed
+   to GitHub Pages (URL at the top). For the record, what blocked it earlier was simply that
+   no static-host account/credentials existed in this workspace — a separate issue from the
+   Nebius billing-country problem; an authenticated `gh` CLI present in the environment
+   closed it without any Nebius involvement.
 4. Offline rule parsing covers a fixed vocabulary (spawn/boost/clear/gravity/particles/
    retheme/count; Chinese numerals 一–十/两/百); anything outside it is refused honestly
    rather than guessed.
+5. **`--live` exit-code semantics (measured):** `node selfcheck.mjs` (no flag) → exit 0,
+   live never requested (opt-in by design); `--live` without a key → exit 1 (fails loudly);
+   `--live` with an invalid key → probes run against the real service, report per-probe
+   HTTP results, exit 1. A CI gate that appends `--live` therefore fails closed when the
+   key is missing — "unconfigured" can never masquerade as "passed".
